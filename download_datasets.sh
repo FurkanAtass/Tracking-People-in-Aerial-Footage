@@ -24,4 +24,18 @@ unzip -q VisDrone2019-MOT-test-dev.zip
 # rm VisDrone2019-MOT-test-dev.zip
 python3 ../data/convert_visdrone_to_yolo.py
 
+# Download Okutama Action dataset
+echo "Downloading Okutama Action dataset..."
+wget -O OkutamaAction.zip \
+"https://www.dropbox.com/scl/fo/9qvpsb3fsamvqzsa12149/APTyV-f01XLnJ0WFpZSBLOE?e=2&preview=TrainSetFrames.zip&rlkey=7u7131amaul29amyr4jbnnu03&dl=1"
+
+unzip OkutamaAction.zip
+
+rm TestSetVideos.zip TrainSetVideos.zip FinalModels.zip Sample.zip Okutama.zip
+
+unzip TrainSetFrames.zip
+
+# Convert to YOLO format
+python3 ../data/convert_okutama_to_yolo.py
+
 echo "Done!"
