@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Simple script to download and process VisDrone datasets
+mkdir -p datasets
 cd datasets
 
 # Download train set
