@@ -151,19 +151,38 @@ def process_sequence(sequence_name, label_path, images_base_path, output_path, s
 
 def process_split(split_name, datasets_dir, output_path):
     """Process train or test split."""
+    # Try to find the dataset structure
+    # Option 1: TrainSetFrames/TestSetFrames structure
     if split_name == 'train':
         frames_dir = datasets_dir / 'TrainSetFrames'
-        labels_dir = frames_dir / 'Labels' / 'SingleActionTrackingLabels' / '3840x2160'
-        images_base = frames_dir
     elif split_name == 'test':
         frames_dir = datasets_dir / 'TestSetFrames'
-        labels_dir = frames_dir / 'Labels' / 'SingleActionTrackingLabels' / '3840x2160'
-        images_base = frames_dir
     else:
         return 0
     
-    if not frames_dir.exists() or not labels_dir.exists():
-        print(f"  {split_name} set not found, skipping...")
+    # Option 2: Direct okutama/ structure (if TrainSetFrames/TestSetFrames not found)
+    if not frames_dir.exists():
+        # Check if we have direct okutama structure
+        okutama_dir = datasets_dir / 'okutama'
+        if okutama_dir.exists() and (okutama_dir / 'Drone1').exists():
+            frames_dir = okutama_dir
+            print(f"  Using direct okutama structure for {split_name}")
+        else:
+            print(f"  {split_name} set not found, skipping...")
+            return 0
+    
+    # Find labels directory
+    labels_dir = frames_dir / 'Labels' / 'SingleActionTrackingLabels' / '3840x2160'
+    if not labels_dir.exists():
+        # Try alternative label paths
+        labels_dir = frames_dir / 'Labels' / '3840x2160'
+    if not labels_dir.exists():
+        labels_dir = frames_dir / 'Labels'
+    
+    images_base = frames_dir
+    
+    if not labels_dir.exists():
+        print(f"  Labels directory not found for {split_name}, skipping...")
         return 0
     
     # Get all label files
@@ -216,13 +235,74 @@ def main():
     print("Converting Okutama Action dataset to YOLO format...")
     print(f"Output: {output_path}")
     
-    # Process train set (will split into train/valid)
-    print("\nProcessing train set...")
-    train_total = process_split('train', datasets_dir, output_path)
+    # Check if we have separate TrainSetFrames/TestSetFrames or combined okutama structure
+    has_train_test = (datasets_dir / 'TrainSetFrames').exists() and (datasets_dir / 'TestSetFrames').exists()
+    has_okutama_raw = (datasets_dir / 'okutama' / 'Drone1').exists() and (datasets_dir / 'okutama' / 'Labels').exists()
     
-    # Process test set
-    print("\nProcessing test set...")
-    test_total = process_split('test', datasets_dir, output_path)
+    if has_train_test:
+        # Process train set (will split into train/valid)
+        print("\nProcessing train set...")
+        train_total = process_split('train', datasets_dir, output_path)
+        
+        # Process test set
+        print("\nProcessing test set...")
+        test_total = process_split('test', datasets_dir, output_path)
+    elif has_okutama_raw:
+        # All data is in okutama/, need to process and split
+        print("\nProcessing combined dataset (will split into train/valid/test)...")
+        okutama_dir = datasets_dir / 'okutama'
+        labels_dir = okutama_dir / 'Labels' / 'SingleActionTrackingLabels' / '3840x2160'
+        if not labels_dir.exists():
+            labels_dir = okutama_dir / 'Labels' / '3840x2160'
+        if not labels_dir.exists():
+            labels_dir = okutama_dir / 'Labels'
+        
+        if not labels_dir.exists():
+            print("  Error: Labels directory not found")
+            return
+        
+        label_files = sorted(labels_dir.glob('*.txt'))
+        print(f"  Found {len(label_files)} sequences")
+        
+        # Split: 70% train, 15% valid, 15% test
+        label_files_list = list(label_files)
+        random.shuffle(label_files_list)
+        
+        train_idx = int(len(label_files_list) * 0.7)
+        valid_idx = train_idx + int(len(label_files_list) * 0.15)
+        
+        train_files = label_files_list[:train_idx]
+        valid_files = label_files_list[train_idx:valid_idx]
+        test_files = label_files_list[valid_idx:]
+        
+        # Process train
+        train_count = 0
+        for label_file in tqdm(train_files, desc="  Converting train"):
+            seq_name = label_file.stem
+            count = process_sequence(seq_name, label_file, okutama_dir, output_path, 'train')
+            train_count += count
+        
+        # Process valid
+        valid_count = 0
+        for label_file in tqdm(valid_files, desc="  Converting valid"):
+            seq_name = label_file.stem
+            count = process_sequence(seq_name, label_file, okutama_dir, output_path, 'valid')
+            valid_count += count
+        
+        # Process test
+        test_count = 0
+        for label_file in tqdm(test_files, desc="  Converting test"):
+            seq_name = label_file.stem
+            count = process_sequence(seq_name, label_file, okutama_dir, output_path, 'test')
+            test_count += count
+        
+        print(f"  Train: {train_count} images, Valid: {valid_count} images, Test: {test_count} images")
+    else:
+        print("Error: Could not find Okutama dataset structure")
+        print("Expected either:")
+        print("  - TrainSetFrames/ and TestSetFrames/ directories, OR")
+        print("  - okutama/Drone1/, okutama/Drone2/, okutama/Labels/ structure")
+        return
     
     # Create dataset.yaml file
     yaml_path = output_path / 'dataset.yaml'
@@ -243,13 +323,26 @@ nc: 1
         f.write(yaml_content)
     print(f"\nCreated dataset.yaml at {yaml_path}")
     
-    # Remove original directories
+    # Remove original directories (only if they exist and are not the output directory)
     print("\nRemoving original dataset directories...")
     for old_dir in ['TrainSetFrames', 'TestSetFrames']:
         old_path = datasets_dir / old_dir
-        if old_path.exists():
+        if old_path.exists() and old_path != output_path:
             print(f"  Removing {old_dir}...")
             shutil.rmtree(old_path)
+    
+    # Also check if okutama has raw data that needs cleaning
+    okutama_raw = datasets_dir / 'okutama'
+    if okutama_raw.exists() and okutama_raw != output_path:
+        # Check if it has Drone1/Drone2/Labels (raw structure)
+        if (okutama_raw / 'Drone1').exists() and (okutama_raw / 'Labels').exists():
+            # Check if we already have converted data
+            if (output_path / 'train' / 'images').exists():
+                print(f"  Removing raw okutama data (Drone1/Drone2/Labels)...")
+                for item in ['Drone1', 'Drone2', 'Labels']:
+                    item_path = okutama_raw / item
+                    if item_path.exists():
+                        shutil.rmtree(item_path)
     
     print("\nDone! Dataset structure:")
     print(f"  {output_path}/train/images/")
