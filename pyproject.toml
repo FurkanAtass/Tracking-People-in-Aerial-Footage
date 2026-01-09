@@ -10,4 +10,5 @@ dependencies = [
     "ultralytics>=8.3.233",
     "pillow>=10.0.0",
     "tqdm>=4.66.0",
+    "matplotlib>=3.7.0",
 ]
