@@ -109,7 +109,8 @@ def process_sequence(sequence_name, label_path, images_base_path, output_path, s
         return 0, None
     
     # Filter frames based on sampling interval
-    if sample_interval and sample_interval > 1:
+    # IMPORTANT: Do NOT sample test sets - use all frames for reliable evaluation
+    if sample_interval and sample_interval > 1 and split != 'test':
         # Filter: keep frame 1 and frames that are multiples of sample_interval
         # This gives us frames 1, sample_interval, 2*sample_interval, etc.
         # Example: sample_interval=15 gives frames 1, 15, 30, 45, ...
@@ -586,9 +587,9 @@ nc: 1
             if valid_samples:
                 all_samples_dict.update(valid_samples)
         
-        # Process test set
-        print("\nProcessing test set...")
-        test_total, test_samples = process_split('test', datasets_dir, output_path, args.sample_interval, args.visualize, False)
+        # Process test set (no sampling - use all frames for reliable evaluation)
+        print("\nProcessing test set (no sampling - using all frames)...")
+        test_total, test_samples = process_split('test', datasets_dir, output_path, None, args.visualize, False)
         if test_samples:
             all_samples_dict.update(test_samples)
     elif has_train_test:
@@ -608,9 +609,9 @@ nc: 1
             if valid_samples:
                 all_samples_dict.update(valid_samples)
         
-        # Process test set
-        print("\nProcessing test set...")
-        test_total, test_samples = process_split('test', datasets_dir, output_path, args.sample_interval, args.visualize, False)
+        # Process test set (no sampling - use all frames for reliable evaluation)
+        print("\nProcessing test set (no sampling - using all frames)...")
+        test_total, test_samples = process_split('test', datasets_dir, output_path, None, args.visualize, False)
         if test_samples:
             all_samples_dict.update(test_samples)
     elif has_okutama_raw:
@@ -631,6 +632,7 @@ nc: 1
         print(f"  Found {len(label_files)} sequences")
         if args.sample_interval and args.sample_interval > 1:
             print(f"  Using frame sampling interval: {args.sample_interval} (frames 1, {args.sample_interval}, {2*args.sample_interval}, {3*args.sample_interval}, ...)")
+            print(f"  NOTE: Test set will use ALL frames (no sampling) for reliable evaluation")
         
         # Split: 70% train, 15% valid, 15% test
         label_files_list = list(label_files)
@@ -663,12 +665,12 @@ nc: 1
             if sample and valid_sample is None:
                 valid_sample = sample
         
-        # Process test
+        # Process test (no sampling - use all frames for reliable evaluation)
         test_count = 0
         test_sample = None
-        for label_file in tqdm(test_files, desc="  Converting test"):
+        for label_file in tqdm(test_files, desc="  Converting test (no sampling)"):
             seq_name = label_file.stem
-            count, sample = process_sequence(seq_name, label_file, okutama_dir, output_path, 'test', args.sample_interval, args.visualize)
+            count, sample = process_sequence(seq_name, label_file, okutama_dir, output_path, 'test', None, args.visualize)
             test_count += count
             if sample and test_sample is None:
                 test_sample = sample
