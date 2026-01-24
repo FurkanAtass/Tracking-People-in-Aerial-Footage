@@ -10,6 +10,13 @@ Usage:
         --output-dir results/evaluation
 """
 
+"""
+python test_model_visdrone.py \
+        --model-path Experiments/yolov11-nano/people-detection/weights/best.pt \
+        --model-type yolo11n \
+        --dataset-path datasets/okutama/dataset.yaml \
+        --output-dir results/evaluation
+"""
 import argparse
 import json
 import numpy as np
@@ -17,13 +24,12 @@ import tempfile
 import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from ultralytics import RTDETR, YOLO
 
 try:
     import yaml
 except ImportError:
     yaml = None
-
-from ultralytics import YOLO
 
 
 def compute_iou(box1: np.ndarray, box2: np.ndarray) -> float:
@@ -560,7 +566,10 @@ def load_model(model_path: Path, model_type: str):
     
     # All ultralytics models can be loaded with YOLO()
     # The model type is determined by the file itself
-    model = YOLO(str(model_path))
+    if model_type == 'rtdetr-l':
+        model = RTDETR(str(model_path))
+    else:
+        model = YOLO(str(model_path))
     
     return model
 
@@ -606,6 +615,7 @@ Examples:
         required=True,
         choices=['yolov8n', 'yolov8s', 'yolov8m', 'yolov8l', 'yolov8x',
                  'yolo11n', 'yolo11s', 'yolo11m', 'yolo11l', 'yolo11x',
+                 'yolov26n', 'yolov26s', 'yolov26m', 'yolov26l', 'yolov26x',
                  'rtdetr-l', 'rtdetr-x'],
         help='Type of model (yolov8n, yolo11n, rtdetr-l, etc.)'
     )
