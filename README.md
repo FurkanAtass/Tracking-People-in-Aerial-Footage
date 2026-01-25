@@ -45,8 +45,6 @@ datasets/visdrone-det/
 
 **Features:**
 - Combines "pedestrian" (class 1) and "people" (class 2) into single "person" class (class 0)
-- Skips conversion if dataset already exists
-- Includes visualization option
 
 ---
 
@@ -106,8 +104,6 @@ datasets/okutama/
 **Features:**
 - Frame sampling for train/valid sets (reduces dataset size)
 - **Test sets always use ALL frames** (no sampling)
-- Handles multiple dataset structures automatically
-- Skips conversion if dataset already exists
 
 **Example:**
 ```bash
@@ -169,7 +165,6 @@ datasets/mot20/
 - Uses detections from `det/det.txt` (not ground truth)
 - Frame sampling for train/valid sets (at 25 FPS)
 - **Test sets always use ALL frames** (no sampling)
-- Skips conversion if dataset already exists
 
 **Examples:**
 ```bash
@@ -200,7 +195,6 @@ python3 ../data/combine_yolo_datasets.py --datasets DATASET1 DATASET2 ... [--out
 
 **Important Notes:**
 - Only combines **train** and **valid** splits (test sets are excluded)
-- Automatically handles filename conflicts by adding dataset prefixes
 - Creates a single `dataset.yaml` file for the combined dataset
 
 **Example:**
@@ -221,80 +215,51 @@ datasets/all_datasets/
 └── dataset.yaml
 ```
 
-**Training with Combined Dataset:**
-```python
-from ultralytics import YOLO
+### Generate COCO Labels
 
-model = YOLO('yolov8n.pt')
-model.train(data='datasets/all_datasets/dataset.yaml', epochs=100)
-```
-
----
-
-## Visualization Scripts
-
-### 1. Visualize YOLO Dataset
-
-General visualization script for any YOLO format dataset.
+Converts YOLO format labels to COCO format JSON files. Some models (e.g., DETR-based models) require COCO formatted annotations. This script converts the labels while keeping the original YOLO dataset structure intact, allowing you to use the same dataset for both YOLO and COCO-based training.
 
 **Usage:**
 ```bash
 cd datasets
-python3 ../data/visualize_yolo_dataset.py DATASET_ROOT [--num_samples N]
+python3 ../data/yolo_to_coco.py --dataset_root DATASET_PATH [--output_dir OUTPUT_DIR]
 ```
 
 **Arguments:**
-- `DATASET_ROOT`: Root directory of the YOLO dataset (required)
-- `--num_samples`: (optional, default: 1) Number of random samples to show from each split
+- `--dataset_root`: Path to dataset root directory (should contain train/images, train/labels, valid/images, valid/labels, and optionally test/images, test/labels)
+- `--output_dir`: (optional, default: dataset_root) Directory to save JSON files
+
+**Important Notes:**
+- Converts YOLO format (normalized x_center, y_center, width, height) to COCO format (absolute x_min, y_min, width, height)
+- Reads class names from `dataset.yaml` if available
+- Generates `train.json` and `val.json` files (and `test.json` if test split exists)
+- Original YOLO format files remain unchanged - only JSON annotations are created
 
 **Example:**
 ```bash
-# Visualize mot20 dataset with 1 sample per split
-python3 ../data/visualize_yolo_dataset.py mot20
+# Convert combined dataset to COCO format
+python3 ../data/yolo_to_coco.py --dataset_root combined
 
-# Visualize with 3 samples per split
-python3 ../data/visualize_yolo_dataset.py visdrone-det --num_samples 3
+# Convert specific dataset and save JSONs to custom location
+python3 ../data/yolo_to_coco.py --dataset_root visdrone --output_dir visdrone/coco_labels
 ```
 
-**Features:**
-- Randomly samples images from train/valid/test splits
-- Displays bounding boxes with class names (if available in dataset.yaml)
-- Color-coded boxes by class
-- Works with any YOLO format dataset
+**Output:**
+```
+datasets/combined/
+├── train/
+│   ├── images/
+│   └── labels/
+├── valid/
+│   ├── images/
+│   └── labels/
+├── dataset.yaml
+├── train.json  (COCO format annotations)
+└── val.json    (COCO format annotations)
+```
 
 ---
 
-### 2. Explore MOT20 Dataset
-
-Explores and analyzes the MOT20 Challenge dataset structure.
-
-**Usage:**
-```bash
-cd datasets
-python3 ../data/explore_mot20.py [--samples_only] [--no_visualize]
-```
-
-**Arguments:**
-- `--samples_only`: (optional) Skip analysis and show only visualization samples
-- `--no_visualize`: (optional) Skip visualization (only print statistics)
-
-**Example:**
-```bash
-# Full analysis with visualization
-python3 ../data/explore_mot20.py
-
-# Only show samples
-python3 ../data/explore_mot20.py --samples_only
-
-# Only analysis, no visualization
-python3 ../data/explore_mot20.py --no_visualize
-```
-
-**Features:**
-- Analyzes dataset structure (sequences, annotations, tracks, classes)
-- Shows video metadata (FPS, resolution, duration)
-- Displays sample frames with bounding boxes
-- Provides detailed statistics by split
 
 ---
 

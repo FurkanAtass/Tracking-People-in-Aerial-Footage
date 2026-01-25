@@ -7,9 +7,12 @@ requires-python = ">=3.11"
 dependencies = [
     "gdown>=5.2.0",
     "lap>=0.5.12",
-    "ultralytics>=8.3.233",
     "pillow>=10.0.0",
     "tqdm>=4.66.0",
     "matplotlib>=3.7.0",
     "pycocotools>=2.0.11",
+    "ultralytics>=8.4.7",
+    "rfdetr>=1.4.0",
+    "supervision>=0.27.0",
+    "roboflow>=1.2.13",
 ]
