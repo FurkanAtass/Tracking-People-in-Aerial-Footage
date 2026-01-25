@@ -14,8 +14,8 @@ Usage:
 python test_model_visdrone.py \
         --model-path Experiments/yolov11-nano/people-detection/weights/best.pt \
         --model-type yolo11n \
-        --dataset-path datasets/okutama/dataset.yaml \
-        --output-dir results/evaluation
+        --dataset-path datasets/visdrone/dataset.yaml \
+        --output-dir results/visdrone-p2
 """
 import argparse
 import json
@@ -296,7 +296,7 @@ def compute_mr_lamr_fppi(model, dataset_path: Path, conf_thresholds: List[float]
     }
 
 
-def extract_metrics(results, model_path: Path, dataset_path: Path, model_type: str, skip_mr_metrics: bool = False) -> Dict:
+def extract_metrics(results, model_path: Path, dataset_path: Path, model_type: str, is_p2: bool, skip_mr_metrics: bool = False) -> Dict:
     """
     Extract all metrics from validation results.
     
@@ -423,7 +423,7 @@ def extract_metrics(results, model_path: Path, dataset_path: Path, model_type: s
             conf_thresholds = [0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
             
             # Load model for MR/LAMR/FPPI computation
-            model = YOLO(str(model_path))
+            model = load_model(model_path, model_type, is_p2)
             mr_metrics = compute_mr_lamr_fppi(model, dataset_path, conf_thresholds, iou_threshold=0.5)
             
             if mr_metrics['miss_rate'] is None and mr_metrics['lamr'] is None and mr_metrics['fppi'] is None:
@@ -550,7 +550,7 @@ def prepare_dataset_yaml(dataset_path: Path) -> Tuple[Path, bool]:
         raise
 
 
-def load_model(model_path: Path, model_type: str):
+def load_model(model_path: Path, model_type: str, is_p2: bool):
     """
     Load model based on type.
     
@@ -568,9 +568,33 @@ def load_model(model_path: Path, model_type: str):
     # The model type is determined by the file itself
     if model_type == 'rtdetr-l':
         model = RTDETR(str(model_path))
+    elif is_p2:
+        match model_type:
+            case 'yolov8n':
+                model = YOLO(model="yolo_configs/yolov8n-p2.yaml")
+            case 'yolov8s':
+                model = YOLO(model="yolo_configs/yolov8s-p2.yaml")
+            case 'yolov8m':
+                model = YOLO(model="yolo_configs/yolov8m-p2.yaml")
+            case 'yolov8l':
+                model = YOLO(model="yolo_configs/yolov8l-p2.yaml")
+            case 'yolov26n':
+                model = YOLO(model="yolo_configs/yolov26n-p2.yaml")
+            case 'yolov26s':
+                model = YOLO(model="yolo_configs/yolov26s-p2.yaml")
+            case 'yolov26m':
+                model = YOLO(model="yolo_configs/yolov26m-p2.yaml")
+            case 'yolo11n':
+                model = YOLO(model="yolo_configs/yolo11n-p2.yaml")
+            case 'yolo11s':
+                model = YOLO(model="yolo_configs/yolo11s-p2.yaml")
+            case 'yolo11m':
+                model = YOLO(model="yolo_configs/yolo11m-p2.yaml")
+            case _:
+                raise ValueError(f"Invalid model type: {model_type}")
+        model.load(str(model_path))
     else:
         model = YOLO(str(model_path))
-    
     return model
 
 
@@ -648,6 +672,11 @@ Examples:
         action='store_true',
         help='Skip computation of MR, LAMR, and FPPI (can be slow)'
     )
+    parser.add_argument(
+        'is_p2',
+        action='store_true',
+        help='Is the model a P2 model (default: False)'
+    )
     
     args = parser.parse_args()
     
@@ -655,7 +684,7 @@ Examples:
     model_path = Path(args.model_path)
     dataset_path = Path(args.dataset_path)
     output_dir = Path(args.output_dir)
-    
+    is_p2 = args.is_p2
     # Validate inputs
     if not model_path.exists():
         raise FileNotFoundError(f"Model file not found: {model_path}")
@@ -687,7 +716,7 @@ Examples:
     try:
         # Load model
         print("\nLoading model...")
-        model = load_model(model_path, args.model_type)
+        model = load_model(model_path, args.model_type, is_p2)
         print("✓ Model loaded successfully")
         
         # Run validation
@@ -710,7 +739,7 @@ Examples:
     
     # Extract metrics
     print("\nExtracting metrics...")
-    metrics = extract_metrics(results, model_path, dataset_path, args.model_type, skip_mr_metrics=args.skip_mr_metrics)
+    metrics = extract_metrics(results, model_path, dataset_path, args.model_type, is_p2, skip_mr_metrics=args.skip_mr_metrics)
     
     # Prepare output dictionary
     output_data = {
