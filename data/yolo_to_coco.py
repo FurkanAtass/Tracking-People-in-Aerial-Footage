@@ -127,7 +127,7 @@ def convert_yolo_to_coco(dataset_root, output_dir=None):
             
             # Add image entry
             image_entry = {
-                "file_name": img_path.name,
+                "file_name": f"images/{img_path.name}",
                 "height": img_height,
                 "width": img_width,
                 "id": image_id
@@ -186,8 +186,8 @@ def convert_yolo_to_coco(dataset_root, output_dir=None):
             image_id += 1
         
         # Save JSON file
-        output_filename = f"{phase}.json"
-        output_path = output_dir / output_filename
+        output_filename = "_annotations.coco.json"
+        output_path = output_dir / phase / output_filename
         
         with open(output_path, 'w') as f:
             json.dump(json_file, f, indent=2)
