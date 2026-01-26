@@ -2,6 +2,51 @@
 
 This project contains scripts for converting aerial person detection datasets to YOLO format, combining multiple datasets, and visualizing results.
 
+## DATASET
+
+Datasets used in this project are:
+* VisDrone Object Detection[https://github.com/VisDrone/VisDrone-Dataset]
+    Download: 
+    * trainset(1.44GB)
+    * valset(0.07GB)
+    * testset-dev(0.28GB)
+    Unzip each one and put inside "datasets/VisDrone-DET"
+    Run 
+    ```bash
+    cd datasets
+    python3 ../data/convert_visdrone_det_to_yolo.py
+    python3 ../data/yolo_to_coco.py --dataset_root visdrone
+    ```
+    Optionally delete original dataset files.
+
+* MOT20[https://motchallenge.net/data/MOT20/]
+    Download all data (5GB).
+    Unzip dataset.
+    It only contains train and test sets. For validation set, create "valid" folder and move "train/MOT20-03" to valid folder.
+    Run
+    ```bash
+    cd datasets
+    python3 ../data/convert_mot20_to_yolo.py
+    python3 ../data/yolo_to_coco.py --dataset_root mot-20
+    ```
+    Optionally delete original dataset files.
+
+* Okutama-Action[http://okutama-action.org/]
+    Download Training set (1280x720 frames & labels) (5.3GB)
+    Test set (1280x720 frames & labels) (1.5GB)
+    Unzip each one and put inside "datasets/Okutama-Action-MOT"
+    It only contains train and test sets. For validation set, run the following code to split train set into train and validation with predefined folders and can be changed in the script:
+    ``` bash
+    python3 data/okutama_validation.py
+    ```
+    Run
+    ```bash
+    python3 ../data/convert_okutama_to_yolo.py
+    python3 ../data/yolo_to_coco.py --dataset_root okutama
+    ```
+    Optionally delete original dataset files.
+
+
 ## Dataset Conversion Scripts
 
 All conversion scripts extract only **person class** annotations and convert them to YOLO format. Test sets are **never sampled** to ensure reliable evaluation results.
@@ -133,22 +178,21 @@ python3 ../data/convert_mot20_to_yolo.py [--sample_interval INTERVAL] [--visuali
 **Expected Structure:**
 ```
 datasets/
-└── MOT20-Challenge/
-    └── MOT20/
-        ├── train/
-        │   ├── MOT20-01/
-        │   ├── MOT20-02/
-        │   └── ...
-        ├── valid/
-        │   └── MOT20-03/
-        └── test/
-            ├── MOT20-04/
-            └── ...
+└── MOT20/
+    ├── train/
+    │   ├── MOT20-01/
+    │   ├── MOT20-02/
+    │   └── ...
+    ├── valid/
+    │   └── MOT20-03/
+    └── test/
+        ├── MOT20-04/
+        └── ...
 ```
 
 **Output:**
 ```
-datasets/mot20/
+datasets/mot-20/
 ├── train/
 │   ├── images/
 │   └── labels/

@@ -3,7 +3,7 @@
 Test a pretrained model on a YOLO format test dataset and extract comprehensive metrics.
 
 Usage:
-    python test_model.py \
+    python ultralytics_models/test.py \
         --model-path path/to/model.pt \
         --model-type yolov8n \
         --dataset-path datasets/visdrone-det/dataset.yaml \
@@ -11,11 +11,11 @@ Usage:
 """
 
 """
-python test_model_visdrone.py \
+python ultralytics_models/test.py \
         --model-path Experiments/yolov11-nano/people-detection/weights/best.pt \
-        --model-type yolo11n \
-        --dataset-path datasets/visdrone/dataset.yaml \
-        --output-dir results/visdrone-p2
+        --model-type yolov26n \
+        --dataset-path datasets/VisDrone-DET/dataset.yaml \
+        --output-dir results/visdrone-p2 \
 """
 import argparse
 import json
@@ -297,7 +297,7 @@ def compute_mr_lamr_fppi(model, dataset_path: Path, conf_thresholds: List[float]
     }
 
 
-def extract_metrics(results, model_path: Path, dataset_path: Path, model_type: str, is_p2: bool, skip_mr_metrics: bool = False) -> Dict:
+def extract_metrics(results, model_path: Path, dataset_path: Path, model_type: str, skip_mr_metrics: bool = False) -> Dict:
     """
     Extract all metrics from validation results.
     
@@ -424,7 +424,7 @@ def extract_metrics(results, model_path: Path, dataset_path: Path, model_type: s
             conf_thresholds = [0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
             
             # Load model for MR/LAMR/FPPI computation
-            model = load_model(model_path, model_type, is_p2)
+            model = load_model(model_path, model_type)
             mr_metrics = compute_mr_lamr_fppi(model, dataset_path, conf_thresholds, iou_threshold=0.5)
             
             if mr_metrics['miss_rate'] is None and mr_metrics['lamr'] is None and mr_metrics['fppi'] is None:
@@ -628,11 +628,6 @@ Examples:
         action='store_true',
         help='Skip computation of MR, LAMR, and FPPI (can be slow)'
     )
-    parser.add_argument(
-        'is_p2',
-        action='store_true',
-        help='Is the model a P2 model (default: False)'
-    )
     
     args = parser.parse_args()
     
@@ -640,7 +635,6 @@ Examples:
     model_path = Path(args.model_path)
     dataset_path = Path(args.dataset_path)
     output_dir = Path(args.output_dir)
-    is_p2 = args.is_p2
     # Validate inputs
     if not model_path.exists():
         raise FileNotFoundError(f"Model file not found: {model_path}")
@@ -672,7 +666,7 @@ Examples:
     try:
         # Load model
         print("\nLoading model...")
-        model = load_model(model_path, args.model_type, is_p2)
+        model = load_model(model_path, args.model_type)
         print("✓ Model loaded successfully")
         
         # Run validation
@@ -695,7 +689,7 @@ Examples:
     
     # Extract metrics
     print("\nExtracting metrics...")
-    metrics = extract_metrics(results, model_path, dataset_path, args.model_type, is_p2, skip_mr_metrics=args.skip_mr_metrics)
+    metrics = extract_metrics(results, model_path, dataset_path, args.model_type, skip_mr_metrics=args.skip_mr_metrics)
     
     # Prepare output dictionary
     output_data = {

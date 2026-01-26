@@ -282,7 +282,7 @@ def main():
     
     # Script runs from datasets/ directory, so look in current directory
     datasets_dir = Path('.')
-    output_path = datasets_dir / 'visdrone-det'
+    output_path = datasets_dir / 'visdrone'
     
     # Look for VisDrone-DET directory
     visdrone_det_base = datasets_dir / 'VisDrone-DET'

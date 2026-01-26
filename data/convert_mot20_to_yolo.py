@@ -371,8 +371,8 @@ def main():
     args = parser.parse_args()
     
     datasets_dir = Path('.')
-    output_path = datasets_dir / 'mot20'
-    mot20_base = datasets_dir / 'MOT20-Challenge' / 'MOT20'
+    output_path = datasets_dir / 'mot-20'
+    mot20_base = datasets_dir / 'MOT20'
     
     if not mot20_base.exists():
         print("No MOT20 dataset found in current directory")

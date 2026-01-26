@@ -186,7 +186,7 @@ def convert_yolo_to_coco(dataset_root, output_dir=None):
             image_id += 1
         
         # Save JSON file
-        output_filename = "train.json" if phase == "train" else "val.json"
+        output_filename = f"{phase}.json"
         output_path = output_dir / output_filename
         
         with open(output_path, 'w') as f:
