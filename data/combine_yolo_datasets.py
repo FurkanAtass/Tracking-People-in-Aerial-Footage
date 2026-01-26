@@ -5,6 +5,7 @@ This allows training on multiple datasets using a single dataset.yaml file.
 """
 
 import argparse
+import json
 import shutil
 from pathlib import Path
 try:
@@ -39,14 +40,143 @@ def copy_files_with_rename(src_dir, dst_dir, file_type='*.jpg', prefix=None, cou
     
     return copied, counter
 
-def combine_yolo_datasets(dataset_paths, output_path, dataset_name="combined"):
+def combine_coco_json_files(dataset_paths, output_path, split_name):
+    """
+    Combine COCO format JSON annotation files from multiple datasets.
+    
+    Args:
+        dataset_paths: List of dataset paths
+        output_path: Output directory for combined dataset
+        split_name: Split name ('train' or 'valid')
+    
+    Returns:
+        True if JSON files were combined, False otherwise
+    """
+    json_files_found = []
+    
+    # Collect all JSON files for this split
+    for dataset_path in dataset_paths:
+        dataset_path = Path(dataset_path)
+        
+        # Check for _annotations.coco.json in split folder
+        json_paths = []
+        if (dataset_path / split_name / '_annotations.coco.json').exists():
+            json_paths.append(dataset_path / split_name / '_annotations.coco.json')
+        elif split_name == 'valid' and (dataset_path / 'val' / '_annotations.coco.json').exists():
+            json_paths.append(dataset_path / 'val' / '_annotations.coco.json')
+        
+        for json_path in json_paths:
+            try:
+                with open(json_path, 'r') as f:
+                    json_data = json.load(f)
+                    json_files_found.append({
+                        'path': json_path,
+                        'data': json_data,
+                        'dataset_name': dataset_path.name
+                    })
+            except Exception as e:
+                print(f"  Warning: Could not read {json_path}: {e}")
+                continue
+    
+    if not json_files_found:
+        return False
+    
+    # Combine JSON files
+    combined_categories = []
+    combined_images = []
+    combined_annotations = []
+    
+    # Use categories from first file (should be same across all)
+    if json_files_found:
+        combined_categories = json_files_found[0]['data'].get('categories', [])
+    
+    # Track IDs to ensure uniqueness
+    image_id_offset = 0
+    annotation_id_offset = 0
+    
+    for json_info in json_files_found:
+        json_data = json_info['data']
+        dataset_name = json_info['dataset_name']
+        
+        # Map old image IDs to new image IDs (scoped to this dataset)
+        image_id_mapping = {}
+        
+        # Process images first to build the mapping
+        for img in json_data.get('images', []):
+            old_image_id = img['id']
+            new_image_id = image_id_offset + old_image_id
+            
+            # Update file_name to match the renamed image files
+            # Images are copied to output_path/split_name/images/ with dataset prefix
+            # So file_name should be "images/dataset_filename.jpg"
+            original_filename = img['file_name']
+            # Remove 'images/' prefix if present to get just the filename
+            if original_filename.startswith('images/'):
+                filename_only = original_filename.replace('images/', '')
+            else:
+                filename_only = original_filename
+            
+            # Add dataset prefix to match the renamed files, and keep images/ prefix
+            new_filename = f"images/{dataset_name}_{filename_only}"
+            
+            new_image = {
+                'id': new_image_id,
+                'file_name': new_filename,
+                'height': img['height'],
+                'width': img['width']
+            }
+            combined_images.append(new_image)
+            
+            # Store mapping for annotations
+            image_id_mapping[old_image_id] = new_image_id
+        
+        # Process annotations using the mapping
+        for ann in json_data.get('annotations', []):
+            old_image_id = ann['image_id']
+            if old_image_id in image_id_mapping:
+                new_annotation = {
+                    'id': annotation_id_offset + ann['id'],
+                    'image_id': image_id_mapping[old_image_id],
+                    'category_id': ann['category_id'],
+                    'bbox': ann['bbox'],
+                    'area': ann['area'],
+                    'iscrowd': ann.get('iscrowd', 0),
+                    'ignore': ann.get('ignore', 0),
+                    'segmentation': ann.get('segmentation', [])
+                }
+                combined_annotations.append(new_annotation)
+        
+        # Update offsets for next dataset
+        max_image_id = max([img['id'] for img in json_data.get('images', [])], default=-1)
+        max_annotation_id = max([ann['id'] for ann in json_data.get('annotations', [])], default=-1)
+        image_id_offset += max_image_id + 1
+        annotation_id_offset += max_annotation_id + 1
+    
+    # Create combined JSON
+    combined_json = {
+        'categories': combined_categories,
+        'images': combined_images,
+        'annotations': combined_annotations
+    }
+    
+    # Save combined JSON
+    output_json_path = output_path / split_name / '_annotations.coco.json'
+    output_json_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    with open(output_json_path, 'w') as f:
+        json.dump(combined_json, f, indent=2)
+    
+    print(f"  {split_name.upper()}: Combined {len(json_files_found)} JSON files -> {len(combined_images)} images, {len(combined_annotations)} annotations")
+    
+    return True
+
+def combine_yolo_datasets(dataset_paths, output_path):
     """
     Combine multiple YOLO format datasets into one.
     
     Args:
         dataset_paths: List of paths to YOLO datasets
         output_path: Output directory for combined dataset
-        dataset_name: Name for the combined dataset (for dataset.yaml path)
     """
     output_path = Path(output_path)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -128,6 +258,10 @@ def combine_yolo_datasets(dataset_paths, output_path, dataset_name="combined"):
         
         if total_images > 0:
             total_stats[split_name] = {'images': total_images, 'labels': total_labels}
+            
+            # Combine COCO JSON files for this split
+            print(f"\n  Combining COCO JSON annotations for {split_name}...")
+            combine_coco_json_files(valid_datasets, output_path, split_name)
     
     if not total_stats:
         print("\n⚠️  No data was combined")
@@ -219,12 +353,6 @@ nc: {nc}
     print(f"\nTOTAL: {total_imgs} images, {total_lbls} labels")
     
     print(f"\n✓ Combined dataset created at: {output_path}")
-    print(f"\nYou can now train using:")
-    print(f"  yolo train data={output_yaml_path} model=yolov8n.pt epochs=100")
-    print(f"  or")
-    print(f"  from ultralytics import YOLO")
-    print(f"  model = YOLO('yolov8n.pt')")
-    print(f"  model.train(data='{output_yaml_path}')")
     
     return True
 
