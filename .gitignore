@@ -16,6 +16,8 @@ datasets/okutama
 datasets/visdrone
 datasets/mot-20
 
+Trained_Models/
+
 results/
 
 Experiments/

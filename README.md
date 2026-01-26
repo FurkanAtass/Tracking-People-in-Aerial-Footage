@@ -33,7 +33,7 @@ Trained models and their respective logs can be downloaded directly from [here](
 
 ## TEST
 
-Each model folder contains its own test script. To quickly evaluate a model after training, just run the corresponding test file with the necessary arguments as explained in the test scripts. Each script contains usage examples.
-Test datasets are not sampled and contain the full set of images for evaluation.
-Test results are logged to the console and follow standard object detection metrics (mAP, AR, etc). For details on each script, refer to comments in the code.
+* Each model folder contains its own test script. To quickly evaluate a model after training, just run the corresponding test file with the necessary arguments as explained in the test scripts. Each script contains usage examples.
+* Test datasets are not sampled and contain the full set of images for evaluation.
+* Test results are logged to the console and follow standard object detection metrics (mAP, AR, etc). For details on each script, refer to comments in the code.
 
