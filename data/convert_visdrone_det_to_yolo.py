@@ -318,7 +318,7 @@ def main():
         yaml_path = output_path / 'dataset.yaml'
         if not yaml_path.exists():
             print("\nCreating missing dataset.yaml...")
-            yaml_path_str = 'datasets/visdrone-det'
+            yaml_path_str = 'datasets/visdrone'
             yaml_content = f"""# YOLOv8 dataset configuration for VisDrone-DET (person class only)
 path: {yaml_path_str}  # dataset root dir
 train: train/images  # train images (relative to 'path')
@@ -389,7 +389,7 @@ nc: 1
     # Create dataset.yaml file
     yaml_path = output_path / 'dataset.yaml'
     # Path should be relative to project root (datasets/visdrone-det)
-    yaml_path_str = 'datasets/visdrone-det'
+    yaml_path_str = 'datasets/visdrone'
     yaml_content = f"""# YOLOv8 dataset configuration for VisDrone-DET (person class only)
 path: {yaml_path_str}  # dataset root dir
 train: train/images  # train images (relative to 'path')

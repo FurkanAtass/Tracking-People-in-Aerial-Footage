@@ -2,6 +2,10 @@
 
 This project contains scripts for converting aerial person detection datasets to YOLO format, combining multiple datasets, and visualizing results.
 
+## ENV SETUP
+Install uv
+uv sync
+
 ## DATASET
 
 Datasets used in this project are:
