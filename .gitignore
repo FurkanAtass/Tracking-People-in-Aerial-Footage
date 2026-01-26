@@ -11,7 +11,10 @@ wheels/
 .venv
 
 # Datasets
-datasets/
+datasets/combined
+datasets/okutama
+datasets/visdrone
+datasets/mot-20
 
 results/
 
