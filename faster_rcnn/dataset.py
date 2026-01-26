@@ -1,25 +1,10 @@
-import torch
-from torch.utils.data import Dataset, DataLoader
+# Custom PyTorch Dataset to load COCO-format annotations and images
+from torch.utils.data import Dataset
 from pycocotools.coco import COCO
-import torchvision
-from torchvision import transforms
 from PIL import Image
 import os
-from engine import evaluate
+import torch
 
-TEST_IMAGE_DIR = "../datasets/visdrone/test/images"
-TEST_ANNOTATION_PATH = "../datasets/visdrone/visdrone_test.json"
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
-
-model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, num_classes=2)
-
-model.load_state_dict(torch.load("model_epoch_4.pth", map_location=device))
-model.to(device)
-
-test_transform = transforms.Compose([
-    transforms.ToTensor()
-])
-# Load dataset 
 class CocoDetectionDataset(Dataset):
     # Init function: loads annotation file and prepares list of image IDs
     def __init__(self, image_dir, annotation_path, transforms=None):
@@ -69,23 +54,7 @@ class CocoDetectionDataset(Dataset):
             "iscrowd": iscrowd
         }
 
-        # Apply transforms if any were passed
         if self.transforms:
             image = self.transforms(image)
-            # target['boxes'] = self.transforms(target['boxes'])
 
         return image, target
-
-# Load training dataset
-test_dataset = CocoDetectionDataset(
-    image_dir=TEST_IMAGE_DIR,
-    annotation_path=TEST_ANNOTATION_PATH,
-    transforms=test_transform
-)
-
-train_loader = DataLoader(test_dataset, batch_size=1, shuffle=True, collate_fn=lambda x: tuple(zip(*x)))
-label_list= ["","person"]
-
-model.eval()
-results = evaluate(model, train_loader, device=device)
-print(results)
