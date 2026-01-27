@@ -401,7 +401,7 @@ def main():
         yaml_path = output_path / 'dataset.yaml'
         if not yaml_path.exists():
             print("\nCreating missing dataset.yaml...")
-            yaml_path_str = 'datasets/mot20'
+            yaml_path_str = 'datasets/mot-20'
             yaml_content = f"""# YOLOv8 dataset configuration for MOT20 (person class only - detections)
 path: {yaml_path_str}  # dataset root dir
 train: train/images  # train images (relative to 'path')

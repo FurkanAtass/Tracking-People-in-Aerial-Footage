@@ -20,11 +20,10 @@ def main():
         split='test',
     )
 
-    box_metrics = results.box_metrics
+    box_metrics = results.box
 
     metrics_dict = {
     'map 50:95': float(box_metrics.ap),
-    'map 50': float(box_metrics.mp),
     'mr': float(box_metrics.mr),
     'map50': float(box_metrics.map50),
     'map75': float(box_metrics.map75),
